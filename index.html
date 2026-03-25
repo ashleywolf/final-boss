@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FINAL BOSS</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#0d1117;font-family:'Press Start 2P',monospace;color:#e6edf3}
+canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+#crt{position:fixed;top:0;left:0;width:100%;height:100%;z-index:9998;pointer-events:none;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.15) 0px,rgba(0,0,0,.15) 1px,transparent 1px,transparent 3px);
+  opacity:.3}
+#app{position:relative;z-index:1;width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+.screen{display:none;width:100%;height:100%;align-items:center;justify-content:center;flex-direction:column;padding:20px}
+.screen.active{display:flex}
+
+/* INPUT SCREEN */
+#input-screen{gap:30px;text-align:center}
+#input-screen h1{font-size:clamp(24px,5vw,48px);color:#58a6ff;text-shadow:0 0 20px rgba(88,166,255,.5),0 0 40px rgba(88,166,255,.3);letter-spacing:2px;animation:titlePulse 3s ease-in-out infinite}
+@keyframes titlePulse{0%,100%{text-shadow:0 0 20px rgba(88,166,255,.5),0 0 40px rgba(88,166,255,.3)}50%{text-shadow:0 0 30px rgba(88,166,255,.8),0 0 60px rgba(88,166,255,.5),0 0 80px rgba(88,166,255,.2)}}
+#input-screen .subtitle{font-size:clamp(8px,1.5vw,12px);color:#8b949e;margin-top:-10px;line-height:1.8}
+.input-wrap{position:relative;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:center}
+#username-input{background:#161b22;border:2px solid #30363d;color:#e6edf3;font-family:'Press Start 2P',monospace;font-size:clamp(10px,2vw,16px);padding:14px 20px;width:min(400px,80vw);outline:none;transition:border-color .3s}
+#username-input:focus{border-color:#58a6ff;box-shadow:0 0 15px rgba(88,166,255,.3)}
+#username-input::placeholder{color:#484f58}
+#go-btn{background:#238636;border:2px solid #2ea043;color:#fff;font-family:'Press Start 2P',monospace;font-size:clamp(10px,1.8vw,14px);padding:14px 24px;cursor:pointer;transition:all .2s;text-transform:uppercase}
+#go-btn:hover{background:#2ea043;transform:scale(1.05);box-shadow:0 0 20px rgba(46,160,67,.4)}
+#go-btn:active{transform:scale(.95)}
+#error-msg{color:#f85149;font-size:10px;min-height:20px;margin-top:10px}
+.hint{font-size:8px;color:#484f58;margin-top:5px}
+
+/* REVEAL SCREEN */
+#reveal-screen{position:relative;overflow:hidden}
+canvas#reveal-canvas{position:absolute;top:0;left:0;width:100%;height:100%}
+#reveal-overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:2}
+
+/* BOSS CARD SCREEN */
+#card-screen{overflow-y:auto;overflow-x:hidden;padding:20px}
+#boss-card{background:#0d1117;border:2px solid #30363d;border-radius:12px;width:min(600px,95vw);padding:30px 24px;position:relative;overflow:hidden}
+#boss-card .card-glow{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;border-radius:12px;opacity:.15}
+.boss-header{text-align:center;position:relative;z-index:1;margin-bottom:20px}
+.avatar-wrap{position:relative;display:inline-block;margin-bottom:16px}
+.avatar-wrap img{width:120px;height:120px;border-radius:50%;border:3px solid #30363d;display:block;image-rendering:auto}
+.avatar-glow{position:absolute;top:-8px;left:-8px;width:136px;height:136px;border-radius:50%;pointer-events:none;filter:blur(15px);opacity:.5}
+.boss-name{font-size:clamp(14px,3vw,22px);color:#e6edf3;margin-bottom:6px;word-break:break-all}
+.boss-type{font-size:clamp(8px,1.5vw,11px);color:#8b949e;margin-bottom:10px}
+.boss-bio{font-size:clamp(7px,1.2vw,9px);color:#8b949e;font-style:italic;line-height:1.8;max-width:90%;margin:0 auto}
+.stats-grid{display:grid;grid-template-columns:1fr;gap:10px;margin:20px 0;position:relative;z-index:1}
+.stat-row{display:flex;align-items:center;gap:8px;font-size:clamp(7px,1.2vw,9px)}
+.stat-label{width:36px;text-align:right;color:#8b949e;flex-shrink:0}
+.stat-bar-bg{flex:1;height:14px;background:#161b22;border-radius:2px;overflow:hidden;border:1px solid #21262d}
+.stat-bar-fill{height:100%;border-radius:1px;transition:width 1s ease-out}
+.stat-val{width:50px;text-align:left;color:#e6edf3;flex-shrink:0}
+.attacks-section{margin:20px 0;position:relative;z-index:1}
+.attacks-title{font-size:clamp(8px,1.3vw,10px);color:#58a6ff;margin-bottom:12px;text-align:center}
+.attack{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#161b22;border:1px solid #21262d;border-radius:4px;margin-bottom:6px;font-size:clamp(7px,1.1vw,9px)}
+.attack-name{color:#e6edf3;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:10px}
+.attack-dmg{color:#f0883e;white-space:nowrap}
+.attack-lang{font-size:clamp(6px,1vw,7px);color:#484f58;margin-left:8px;flex-shrink:0}
+.threat-section{text-align:center;margin-top:24px;position:relative;z-index:1}
+.threat-label{font-size:clamp(7px,1.2vw,9px);color:#8b949e;margin-bottom:10px}
+.threat-badge{font-size:clamp(28px,6vw,52px);font-weight:bold;letter-spacing:4px;text-shadow:0 0 30px currentColor,0 0 60px currentColor}
+.threat-D{color:#484f58}.threat-C{color:#3fb950}.threat-B{color:#58a6ff}
+.threat-A{color:#a371f7}.threat-S{color:#d29922}.threat-SS{color:#f85149}
+.threat-SSS{background:linear-gradient(90deg,#f85149,#d29922,#3fb950,#58a6ff,#a371f7,#f85149);
+  background-size:200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;animation:rainbowShift 2s linear infinite}
+@keyframes rainbowShift{0%{background-position:0% 50%}100%{background-position:200% 50%}}
+
+.boss-sprite-wrap{text-align:center;margin:16px 0;position:relative;z-index:1}
+canvas.boss-sprite{image-rendering:pixelated}
+
+.share-bar{display:flex;gap:10px;justify-content:center;margin-top:24px;flex-wrap:wrap;position:relative;z-index:1}
+.share-btn{background:#21262d;border:1px solid #30363d;color:#e6edf3;font-family:'Press Start 2P',monospace;font-size:clamp(7px,1.1vw,9px);padding:10px 16px;cursor:pointer;transition:all .2s;border-radius:4px}
+.share-btn:hover{background:#30363d;transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.share-btn.primary{background:#238636;border-color:#2ea043}
+.share-btn.primary:hover{background:#2ea043}
+#new-boss-btn{margin-top:10px}
+
+.shake{animation:shake .5s ease-in-out}
+@keyframes shake{0%,100%{transform:translate(0)}10%{transform:translate(-8px,4px)}20%{transform:translate(6px,-6px)}30%{transform:translate(-4px,8px)}40%{transform:translate(8px,-2px)}50%{transform:translate(-6px,6px)}60%{transform:translate(4px,-8px)}70%{transform:translate(-8px,2px)}80%{transform:translate(6px,6px)}90%{transform:translate(-2px,-4px)}}
+
+@media(max-width:500px){
+  #boss-card{padding:20px 14px}
+  .stat-row{gap:4px;font-size:7px}
+  .stat-label{width:28px}
+  .stat-val{width:40px}
+  .attack{padding:6px 8px}
+}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div id="crt"></div>
+<div id="app">
+  <div id="input-screen" class="screen active">
+    <h1>FINAL BOSS</h1>
+    <p class="subtitle">Enter a GitHub username.<br>Become the boss.</p>
+    <div class="input-wrap">
+      <input type="text" id="username-input" placeholder="GitHub username" maxlength="39" autocomplete="off" spellcheck="false">
+      <button id="go-btn">FIGHT</button>
+    </div>
+    <div id="error-msg"></div>
+    <p class="hint">No auth required. Public data only.</p>
+  </div>
+  <div id="reveal-screen" class="screen">
+    <canvas id="reveal-canvas"></canvas>
+    <div id="reveal-overlay"></div>
+  </div>
+  <div id="card-screen" class="screen">
+    <div id="boss-card"></div>
+    <div class="share-bar">
+      <button class="share-btn primary" id="save-btn">SAVE IMAGE</button>
+      <button class="share-btn" id="copy-btn">COPY</button>
+      <button class="share-btn" id="share-btn">SHARE</button>
+      <button class="share-btn" id="new-boss-btn">NEW BOSS</button>
+    </div>
+  </div>
+</div>
+<script>
+// ============================================================
+// FINAL BOSS - GitHub RPG Boss Card Generator
+// ============================================================
+
+const LANG_COLORS = {
+  JavaScript:'#f1e05a',TypeScript:'#3178c6',Python:'#3572a5',Java:'#b07219',
+  'C++':'#f34b7d',C:'#555555','C#':'#178600',Go:'#00add8',Rust:'#dea584',
+  Ruby:'#701516',PHP:'#4f5d95',Swift:'#f05138',Kotlin:'#a97bff',Scala:'#c22d40',
+  Shell:'#89e051',Dart:'#00b4ab',Lua:'#000080',Haskell:'#5e5086',Elixir:'#6e4a7e',
+  Clojure:'#db5855',Vue:'#41b883',HTML:'#e34c26',CSS:'#563d7c',SCSS:'#c6538c',
+  R:'#198ce7',Julia:'#a270ba',Zig:'#ec915c',Nim:'#ffc200',OCaml:'#3be133',
+  Perl:'#0298c3',Objective_C:'#438eff',default:'#8b949e'
+};
+const LANG_TITLES = {
+  JavaScript:'Archmage',TypeScript:'Paladin',Python:'Necromancer',Java:'Warlord',
+  'C++':'Destroyer',C:'Ancient One',Go:'Sentinel',Rust:'Berserker',Ruby:'Enchanter',
+  PHP:'Warlock',Swift:'Blademaster',Kotlin:'Shadow Knight',Scala:'Alchemist',
+  Shell:'Mechanist',Dart:'Chronomancer',Haskell:'Oracle',Elixir:'Druid',
+  'C#':'Templar',Lua:'Trickster',Vue:'Illusionist',HTML:'Artificer',CSS:'Glamourist',
+  R:'Diviner',Julia:'Sage',Zig:'Forgemaster',Nim:'Mystic',Clojure:'Monk',
+  Perl:'Hermit',default:'Dark Lord'
+};
+const THREAT_COLORS = {D:'#484f58',C:'#3fb950',B:'#58a6ff',A:'#a371f7',S:'#d29922',SS:'#f85149',SSS:'#f85149'};
+
+// ---- Audio Engine ----
+let audioCtx = null;
+function getAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+function playBassHit() {
+  const ctx = getAudio(), t = ctx.currentTime;
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = 'sine'; o.frequency.setValueAtTime(55, t);
+  o.frequency.exponentialRampToValueAtTime(30, t + .8);
+  g.gain.setValueAtTime(.7, t);
+  g.gain.exponentialRampToValueAtTime(.001, t + 1.2);
+  o.connect(g); g.connect(ctx.destination);
+  o.start(t); o.stop(t + 1.3);
+  // sub rumble
+  const o2 = ctx.createOscillator(), g2 = ctx.createGain();
+  o2.type = 'sine'; o2.frequency.setValueAtTime(35, t);
+  g2.gain.setValueAtTime(.4, t);
+  g2.gain.exponentialRampToValueAtTime(.001, t + 1.5);
+  o2.connect(g2); g2.connect(ctx.destination);
+  o2.start(t); o2.stop(t + 1.6);
+}
+function playTick() {
+  const ctx = getAudio(), t = ctx.currentTime;
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = 'square'; o.frequency.setValueAtTime(800 + Math.random() * 400, t);
+  g.gain.setValueAtTime(.08, t);
+  g.gain.exponentialRampToValueAtTime(.001, t + .05);
+  o.connect(g); g.connect(ctx.destination);
+  o.start(t); o.stop(t + .06);
+}
+function playChord() {
+  const ctx = getAudio(), t = ctx.currentTime;
+  [110, 138.59, 164.81, 220, 329.63].forEach((f, i) => {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = i < 2 ? 'sawtooth' : 'sine';
+    o.frequency.setValueAtTime(f, t);
+    g.gain.setValueAtTime(.12, t);
+    g.gain.linearRampToValueAtTime(.15, t + .3);
+    g.gain.exponentialRampToValueAtTime(.001, t + 2.5);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(t); o.stop(t + 2.6);
+  });
+}
+function playAttackSound() {
+  const ctx = getAudio(), t = ctx.currentTime;
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = 'sawtooth';
+  o.frequency.setValueAtTime(200, t);
+  o.frequency.exponentialRampToValueAtTime(80, t + .3);
+  g.gain.setValueAtTime(.15, t);
+  g.gain.exponentialRampToValueAtTime(.001, t + .35);
+  o.connect(g); g.connect(ctx.destination);
+  o.start(t); o.stop(t + .4);
+}
+let musicOscs = [];
+function startBossMusic() {
+  stopBossMusic();
+  const ctx = getAudio(), t = ctx.currentTime;
+  const masterGain = ctx.createGain();
+  masterGain.gain.setValueAtTime(.06, t);
+  masterGain.connect(ctx.destination);
+  // simple dark arpeggio loop
+  const notes = [55, 65.41, 73.42, 82.41, 73.42, 65.41];
+  const noteLen = .25;
+  function scheduleNote(freq, when) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(freq, when);
+    g.gain.setValueAtTime(0, when);
+    g.gain.linearRampToValueAtTime(.3, when + .02);
+    g.gain.exponentialRampToValueAtTime(.001, when + noteLen - .01);
+    o.connect(g); g.connect(masterGain);
+    o.start(when); o.stop(when + noteLen);
+    musicOscs.push(o);
+  }
+  const loopLen = notes.length * noteLen;
+  for (let loop = 0; loop < 40; loop++) {
+    notes.forEach((n, i) => {
+      scheduleNote(n, t + loop * loopLen + i * noteLen);
+      scheduleNote(n * 2, t + loop * loopLen + i * noteLen);
+    });
+  }
+  musicOscs.push(masterGain);
+}
+function stopBossMusic() {
+  musicOscs.forEach(n => { try { if (n.stop) n.stop(); else if (n.disconnect) n.disconnect(); } catch(e){} });
+  musicOscs = [];
+}
+
+// ---- Background particles ----
+const bgCanvas = document.getElementById('bg');
+const bgCtx = bgCanvas.getContext('2d');
+let bgParticles = [];
+function resizeBg() {
+  bgCanvas.width = window.innerWidth;
+  bgCanvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeBg);
+resizeBg();
+for (let i = 0; i < 50; i++) {
+  bgParticles.push({
+    x: Math.random() * bgCanvas.width,
+    y: Math.random() * bgCanvas.height,
+    r: Math.random() * 1.5 + .5,
+    dx: (Math.random() - .5) * .3,
+    dy: -Math.random() * .5 - .1,
+    a: Math.random() * .3 + .1
+  });
+}
+function animBg() {
+  bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+  bgParticles.forEach(p => {
+    p.x += p.dx; p.y += p.dy;
+    if (p.y < -5) { p.y = bgCanvas.height + 5; p.x = Math.random() * bgCanvas.width; }
+    if (p.x < -5) p.x = bgCanvas.width + 5;
+    if (p.x > bgCanvas.width + 5) p.x = -5;
+    bgCtx.beginPath();
+    bgCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    bgCtx.fillStyle = `rgba(88,166,255,${p.a})`;
+    bgCtx.fill();
+  });
+  requestAnimationFrame(animBg);
+}
+animBg();
+
+// ---- Screens ----
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ---- GitHub API ----
+async function fetchGitHubData(username) {
+  const [userRes, reposRes] = await Promise.all([
+    fetch(`https://api.github.com/users/${encodeURIComponent(username)}`),
+    fetch(`https://api.github.com/users/${encodeURIComponent(username)}/repos?sort=stars&per_page=10&direction=desc`)
+  ]);
+  if (userRes.status === 404) throw new Error('User not found');
+  if (userRes.status === 403) throw new Error('Rate limited. Try again in a minute.');
+  if (!userRes.ok) throw new Error(`GitHub API error (${userRes.status})`);
+  const user = await userRes.json();
+  const repos = reposRes.ok ? await reposRes.json() : [];
+  return { user, repos };
+}
+
+function calcStats(user, repos) {
+  const totalStars = repos.reduce((s, r) => s + (r.stargazers_count || 0), 0);
+  const now = Date.now();
+  const created = new Date(user.created_at).getTime();
+  const ageYears = Math.max(1, (now - created) / (365.25 * 24 * 60 * 60 * 1000));
+  const ninetyDaysAgo = now - 90 * 24 * 60 * 60 * 1000;
+  const recentRepos = repos.filter(r => new Date(r.updated_at).getTime() > ninetyDaysAgo).length;
+
+  const hp = Math.min(9999, totalStars > 0 ? Math.floor(Math.log2(totalStars + 1) * 600) : 50);
+  const atk = Math.min(9999, (user.public_repos || 0) * 10);
+  const def = Math.min(9999, Math.floor(ageYears * 100));
+  const mag = Math.min(9999, user.followers > 0 ? Math.floor(Math.log2(user.followers + 1) * 300) : 10);
+  const spd = Math.min(9999, recentRepos * 25);
+  const total = hp + atk + def + mag + spd;
+
+  let threat;
+  if (total >= 50000) threat = 'SSS';
+  else if (total >= 15000) threat = 'SS';
+  else if (total >= 5000) threat = 'S';
+  else if (total >= 2000) threat = 'A';
+  else if (total >= 500) threat = 'B';
+  else if (total >= 100) threat = 'C';
+  else threat = 'D';
+
+  // dominant language
+  const langCount = {};
+  repos.forEach(r => { if (r.language) langCount[r.language] = (langCount[r.language] || 0) + (r.stargazers_count || 0) + 1; });
+  const topLang = Object.entries(langCount).sort((a, b) => b[1] - a[1])[0];
+  const primaryLang = topLang ? topLang[0] : null;
+
+  const topRepos = repos
+    .filter(r => !r.fork)
+    .sort((a, b) => (b.stargazers_count || 0) - (a.stargazers_count || 0))
+    .slice(0, 3);
+  // if we filtered too many, fallback to all
+  const attacks = topRepos.length ? topRepos : repos.slice(0, 3);
+
+  return { hp, atk, def, mag, spd, total, threat, primaryLang, attacks, totalStars, ageYears };
+}
+
+function getLangColor(lang) {
+  return LANG_COLORS[lang] || LANG_COLORS.default;
+}
+function getBossTitle(lang) {
+  return LANG_TITLES[lang] || LANG_TITLES.default;
+}
+function threatTierNum(threat) {
+  return {D:1,C:1,B:2,A:3,S:4,SS:5,SSS:5}[threat] || 1;
+}
+
+// ---- Boss Sprite Rendering ----
+function drawBossSprite(tier, color, size) {
+  const c = document.createElement('canvas');
+  const px = Math.max(2, Math.floor(size / (tier < 3 ? 16 : tier < 5 ? 24 : 32)));
+  const grid = tier < 3 ? 16 : tier < 5 ? 24 : 32;
+  c.width = grid * px; c.height = grid * px;
+  const ctx = c.getContext('2d');
+  const rgb = hexToRgb(color);
+
+  function drawPx(x, y, r, g, b, a) {
+    ctx.fillStyle = `rgba(${r},${g},${b},${a || 1})`;
+    ctx.fillRect(x * px, y * px, px, px);
+  }
+  function mirror(pattern, offY) {
+    const half = Math.ceil(pattern[0].length / 2);
+    pattern.forEach((row, ry) => {
+      for (let x = 0; x < row.length; x++) {
+        if (row[x]) {
+          const shade = row[x] === 2 ? .6 : row[x] === 3 ? 1.3 : 1;
+          const r = Math.min(255, Math.floor(rgb.r * shade));
+          const g = Math.min(255, Math.floor(rgb.g * shade));
+          const b = Math.min(255, Math.floor(rgb.b * shade));
+          const cx = Math.floor(grid / 2 - half);
+          drawPx(cx + x, offY + ry, r, g, b);
+          if (x < half - (pattern[0].length % 2 === 0 ? 1 : 0)) {
+            const mx = cx + pattern[0].length - 1 - x;
+            drawPx(mx, offY + ry, r, g, b);
+          }
+        }
+      }
+    });
+  }
+
+  if (tier <= 1) {
+    // slime
+    const p = [
+      [0,0,0,1,1,1,0,0],
+      [0,0,1,1,1,1,1,0],
+      [0,1,3,1,1,3,1,0],
+      [0,1,1,1,1,1,1,0],
+      [1,1,1,2,2,1,1,1],
+      [1,1,1,1,1,1,1,1],
+      [0,1,2,1,1,2,1,0],
+      [0,0,1,1,1,1,0,0],
+    ];
+    const off = Math.floor((grid - 8) / 2);
+    p.forEach((row, ry) => row.forEach((v, rx) => {
+      if (v) {
+        const shade = v === 2 ? .6 : v === 3 ? 1.5 : 1;
+        drawPx(off + rx, off + ry, Math.min(255, Math.floor(rgb.r * shade)), Math.min(255, Math.floor(rgb.g * shade)), Math.min(255, Math.floor(rgb.b * shade)));
+      }
+    }));
+    // eyes
+    drawPx(off + 2, off + 2, 255, 255, 255); drawPx(off + 5, off + 2, 255, 255, 255);
+  } else if (tier === 2) {
+    // medium creature - knight-like
+    const p = [
+      [0,0,0,1,1,1,1,0,0,0],
+      [0,0,1,3,3,3,3,1,0,0],
+      [0,1,1,3,1,1,3,1,1,0],
+      [0,1,3,1,1,1,1,3,1,0],
+      [0,0,1,1,1,1,1,1,0,0],
+      [0,1,1,2,1,1,2,1,1,0],
+      [1,1,1,1,1,1,1,1,1,1],
+      [1,2,1,1,1,1,1,1,2,1],
+      [0,0,1,1,0,0,1,1,0,0],
+      [0,0,1,2,0,0,2,1,0,0],
+    ];
+    const off = Math.floor((grid - 10) / 2);
+    p.forEach((row, ry) => row.forEach((v, rx) => {
+      if (v) {
+        const shade = v === 2 ? .5 : v === 3 ? 1.4 : 1;
+        drawPx(off + rx, off + ry, Math.min(255, Math.floor(rgb.r * shade)), Math.min(255, Math.floor(rgb.g * shade)), Math.min(255, Math.floor(rgb.b * shade)));
+      }
+    }));
+    drawPx(off + 3, off + 3, 255, 50, 50); drawPx(off + 6, off + 3, 255, 50, 50);
+  } else if (tier === 3) {
+    // large boss with horns
+    const p = [
+      [0,0,1,0,0,0,0,0,0,0,0,1,0,0],
+      [0,1,1,0,0,0,0,0,0,0,0,1,1,0],
+      [0,1,0,0,1,1,1,1,1,1,0,0,1,0],
+      [0,0,0,1,1,1,1,1,1,1,1,0,0,0],
+      [0,0,1,3,3,1,1,1,1,3,3,1,0,0],
+      [0,0,1,1,3,1,1,1,1,3,1,1,0,0],
+      [0,0,1,1,1,1,2,2,1,1,1,1,0,0],
+      [0,0,0,1,1,1,1,1,1,1,1,0,0,0],
+      [0,1,1,1,2,1,1,1,1,2,1,1,1,0],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,2,1,1,1,1,1,1,1,1,1,1,2,1],
+      [0,0,1,1,1,0,0,0,0,1,1,1,0,0],
+      [0,0,1,1,0,0,0,0,0,0,1,1,0,0],
+      [0,0,2,2,0,0,0,0,0,0,2,2,0,0],
+    ];
+    const off = Math.floor((grid - 14) / 2);
+    p.forEach((row, ry) => row.forEach((v, rx) => {
+      if (v) {
+        const shade = v === 2 ? .4 : v === 3 ? 1.5 : 1;
+        drawPx(off + rx, off + ry, Math.min(255, Math.floor(rgb.r * shade)), Math.min(255, Math.floor(rgb.g * shade)), Math.min(255, Math.floor(rgb.b * shade)));
+      }
+    }));
+    // glowing eyes
+    drawPx(off + 4, off + 4, 255, 200, 50); drawPx(off + 9, off + 4, 255, 200, 50);
+  } else if (tier === 4) {
+    // massive boss with wings
+    const body = [
+      [0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0],
+      [0,0,0,0,0,1,3,3,3,3,3,3,1,0,0,0,0,0],
+      [1,0,0,0,1,1,3,1,1,1,1,3,1,1,0,0,0,1],
+      [1,1,0,0,1,1,1,1,1,1,1,1,1,1,0,0,1,1],
+      [1,1,1,0,1,3,3,1,1,1,1,3,3,1,0,1,1,1],
+      [0,1,1,0,1,1,3,1,1,1,1,3,1,1,0,1,1,0],
+      [0,1,1,1,1,1,1,2,2,2,2,1,1,1,1,1,1,0],
+      [0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0],
+      [0,0,0,1,1,2,1,1,1,1,1,1,2,1,1,0,0,0],
+      [0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0],
+      [0,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,0],
+      [0,1,0,0,1,1,1,1,1,1,1,1,1,1,0,0,1,0],
+      [0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0],
+      [0,0,0,0,0,1,2,0,0,0,0,2,1,0,0,0,0,0],
+    ];
+    const off = Math.floor((grid - 18) / 2);
+    body.forEach((row, ry) => row.forEach((v, rx) => {
+      if (v) {
+        const shade = v === 2 ? .35 : v === 3 ? 1.6 : 1;
+        drawPx(off + rx, off + 3 + ry, Math.min(255, Math.floor(rgb.r * shade)), Math.min(255, Math.floor(rgb.g * shade)), Math.min(255, Math.floor(rgb.b * shade)));
+      }
+    }));
+    // crown
+    [4,5,8,9,12,13].forEach(x => drawPx(off + x, off + 2, 255, 215, 0));
+    [5,8,12].forEach(x => drawPx(off + x, off + 1, 255, 215, 0));
+    // eyes
+    drawPx(off + 6, off + 7, 255, 100, 100); drawPx(off + 11, off + 7, 255, 100, 100);
+    drawPx(off + 7, off + 7, 255, 50, 50); drawPx(off + 10, off + 7, 255, 50, 50);
+  } else {
+    // tier 5: massive eldritch boss fills the canvas
+    const g = grid;
+    // dark aura background
+    for (let y = 0; y < g; y++) for (let x = 0; x < g; x++) {
+      const d = Math.sqrt((x - g/2)**2 + (y - g/2)**2) / (g/2);
+      if (d < .9 && Math.random() > d * 1.2) {
+        drawPx(x, y, Math.floor(rgb.r * .15), Math.floor(rgb.g * .15), Math.floor(rgb.b * .15), .3 + Math.random() * .2);
+      }
+    }
+    // body mass
+    for (let y = 4; y < g - 4; y++) for (let x = 6; x < g - 6; x++) {
+      const cx = g / 2, cy = g / 2 - 2;
+      const d = Math.sqrt((x - cx)**2 + (y - cy)**2);
+      if (d < (g / 2 - 4) * (1 + Math.sin(y * .5) * .1)) {
+        const shade = .6 + Math.sin(x * .3 + y * .2) * .3;
+        drawPx(x, y, Math.min(255, Math.floor(rgb.r * shade)), Math.min(255, Math.floor(rgb.g * shade)), Math.min(255, Math.floor(rgb.b * shade)));
+      }
+    }
+    // horns
+    for (let i = 0; i < 6; i++) {
+      drawPx(8 - i, 4 - i, Math.floor(rgb.r * 1.3), Math.floor(rgb.g * 1.3), Math.floor(rgb.b * 1.3));
+      drawPx(g - 9 + i, 4 - i, Math.floor(rgb.r * 1.3), Math.floor(rgb.g * 1.3), Math.floor(rgb.b * 1.3));
+    }
+    // face features
+    const ey = Math.floor(g / 2 - 4);
+    [[-4, ey], [-3, ey], [3, ey], [4, ey]].forEach(([ox, y]) => {
+      drawPx(Math.floor(g/2) + ox, y, 255, 50, 50);
+    });
+    // mouth
+    for (let x = Math.floor(g/2) - 3; x <= Math.floor(g/2) + 3; x++) {
+      drawPx(x, Math.floor(g/2), 20, 0, 0);
+      if (x % 2 === 0) drawPx(x, Math.floor(g/2) + 1, 255, 255, 255);
+    }
+    // glowing particles
+    for (let i = 0; i < 20; i++) {
+      const ax = Math.floor(Math.random() * g);
+      const ay = Math.floor(Math.random() * g);
+      drawPx(ax, ay, Math.min(255, rgb.r + 100), Math.min(255, rgb.g + 100), Math.min(255, rgb.b + 100), .6);
+    }
+  }
+  return c;
+}
+
+function hexToRgb(hex) {
+  hex = hex.replace('#', '');
+  return {
+    r: parseInt(hex.substring(0, 2), 16) || 100,
+    g: parseInt(hex.substring(2, 4), 16) || 100,
+    b: parseInt(hex.substring(4, 6), 16) || 150
+  };
+}
+
+// ---- Reveal Sequence ----
+async function runReveal(user, stats) {
+  showScreen('reveal-screen');
+  const canvas = document.getElementById('reveal-canvas');
+  const ctx = canvas.getContext('2d');
+  const overlay = document.getElementById('reveal-overlay');
+  overlay.innerHTML = '';
+
+  function resize() {
+    canvas.width = canvas.clientWidth * (window.devicePixelRatio || 1);
+    canvas.height = canvas.clientHeight * (window.devicePixelRatio || 1);
+    ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+  }
+  resize();
+  const W = canvas.clientWidth, H = canvas.clientHeight;
+
+  const langColor = getLangColor(stats.primaryLang);
+  const langRgb = hexToRgb(langColor);
+  let particles = [];
+
+  // preload avatar
+  const avatarImg = new Image();
+  avatarImg.crossOrigin = 'anonymous';
+  avatarImg.src = user.avatar_url;
+  await new Promise(r => { avatarImg.onload = r; avatarImg.onerror = r; });
+
+  // Phase 1: darkness + bass hit (0-1.5s)
+  playBassHit();
+  startBossMusic();
+
+  let revealRunning = true;
+  let phase = 0;
+  let startTime = performance.now();
+  let avatarY = H + 100;
+  let avatarTargetY = H * .28;
+  let avatarAlpha = 0;
+  let shakeAmount = 0;
+  let revealElements = [];
+
+  function addParticleBurst(cx, cy, count, color) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 1 + Math.random() * 4;
+      particles.push({
+        x: cx, y: cy,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1, decay: .008 + Math.random() * .015,
+        r: 2 + Math.random() * 3,
+        color
+      });
+    }
+  }
+
+  function drawFrame(now) {
+    if (!revealRunning) return;
+    const elapsed = (now - startTime) / 1000;
+    ctx.save();
+    // screen shake
+    if (shakeAmount > 0) {
+      ctx.translate((Math.random() - .5) * shakeAmount, (Math.random() - .5) * shakeAmount);
+      shakeAmount *= .92;
+      if (shakeAmount < .5) shakeAmount = 0;
+    }
+    ctx.clearRect(-20, -20, W + 40, H + 40);
+    // dark background
+    ctx.fillStyle = '#0d1117';
+    ctx.fillRect(-20, -20, W + 40, H + 40);
+
+    // Phase transitions
+    if (elapsed > 1 && phase === 0) { phase = 1; } // avatar rise
+    if (elapsed > 3.5 && phase === 1) { phase = 2; } // stats
+    if (elapsed > 8 && phase === 2) { phase = 3; } // attacks
+    if (elapsed > 10 && phase === 3) { phase = 4; } // threat
+    if (elapsed > 12 && phase === 4) { phase = 5; revealRunning = false; }
+
+    // Avatar rise (phase 1+)
+    if (phase >= 1) {
+      const riseProgress = Math.min(1, (elapsed - 1) / 2);
+      const ease = 1 - Math.pow(1 - riseProgress, 3);
+      avatarY = H + 100 - (H + 100 - avatarTargetY) * ease;
+      avatarAlpha = Math.min(1, riseProgress * 1.5);
+
+      // glow behind avatar
+      const glowR = 80 + riseProgress * 40;
+      const grad = ctx.createRadialGradient(W/2, avatarY, 10, W/2, avatarY, glowR);
+      grad.addColorStop(0, `rgba(${langRgb.r},${langRgb.g},${langRgb.b},${.4 * avatarAlpha})`);
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(W/2 - glowR, avatarY - glowR, glowR * 2, glowR * 2);
+
+      // avatar
+      ctx.globalAlpha = avatarAlpha;
+      const avSize = Math.min(100, W * .2);
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(W/2, avatarY, avSize / 2, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(avatarImg, W/2 - avSize/2, avatarY - avSize/2, avSize, avSize);
+      ctx.restore();
+      ctx.globalAlpha = 1;
+
+      // rising particles
+      if (riseProgress < 1 && Math.random() > .5) {
+        addParticleBurst(W/2, avatarY + avSize/2, 2, langColor);
+      }
+
+      // boss name
+      if (riseProgress > .5) {
+        const nameAlpha = Math.min(1, (riseProgress - .5) * 4);
+        ctx.globalAlpha = nameAlpha;
+        ctx.fillStyle = '#e6edf3';
+        ctx.font = `${Math.min(22, W * .04)}px 'Press Start 2P'`;
+        ctx.textAlign = 'center';
+        ctx.fillText(user.login, W/2, avatarY + avSize/2 + 30);
+        ctx.font = `${Math.min(10, W * .02)}px 'Press Start 2P'`;
+        ctx.fillStyle = langColor;
+        const title = (stats.primaryLang || '') + ' ' + getBossTitle(stats.primaryLang);
+        ctx.fillText(title, W/2, avatarY + avSize/2 + 50);
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    // Stats counter (phase 2)
+    if (phase >= 2) {
+      const statProgress = Math.min(1, (elapsed - 3.5) / 4);
+      const statList = [
+        ['HP', stats.hp, '#3fb950'],
+        ['ATK', stats.atk, '#f85149'],
+        ['DEF', stats.def, '#58a6ff'],
+        ['MAG', stats.mag, '#a371f7'],
+        ['SPD', stats.spd, '#d29922']
+      ];
+      const startX = W * .15, barW = W * .35;
+      const startY = H * .55;
+
+      statList.forEach(([label, val, color], i) => {
+        const sp = Math.min(1, Math.max(0, (statProgress - i * .15) * 3));
+        if (sp <= 0) return;
+        if (sp > 0 && sp < 1 && Math.random() > .8) playTick();
+        const y = startY + i * 28;
+        ctx.globalAlpha = sp;
+        ctx.font = `${Math.min(9, W * .015)}px 'Press Start 2P'`;
+        ctx.fillStyle = '#8b949e';
+        ctx.textAlign = 'right';
+        ctx.fillText(label, startX - 8, y + 10);
+        // bar bg
+        ctx.fillStyle = '#161b22';
+        ctx.fillRect(startX, y, barW, 14);
+        // bar fill
+        const fillW = (val / 9999) * barW * sp;
+        ctx.fillStyle = color;
+        ctx.fillRect(startX, y, fillW, 14);
+        // value
+        ctx.fillStyle = '#e6edf3';
+        ctx.textAlign = 'left';
+        ctx.fillText(Math.floor(val * sp).toString(), startX + barW + 10, y + 10);
+        ctx.globalAlpha = 1;
+      });
+    }
+
+    // Attacks (phase 3)
+    if (phase >= 3) {
+      const atkProgress = Math.min(1, (elapsed - 8) / 1.5);
+      const attacks = stats.attacks.slice(0, 3);
+      const startY = H * .55;
+      const startX = W * .6;
+
+      if (atkProgress > 0 && atkProgress < .2) {
+        playAttackSound();
+        shakeAmount = 8;
+      }
+
+      attacks.forEach((repo, i) => {
+        const ap = Math.min(1, Math.max(0, (atkProgress - i * .25) * 3));
+        if (ap <= 0) return;
+        const y = startY + i * 36;
+        ctx.globalAlpha = ap;
+        ctx.font = `${Math.min(8, W * .013)}px 'Press Start 2P'`;
+        ctx.fillStyle = '#e6edf3';
+        ctx.textAlign = 'left';
+        const name = repo.name.length > 18 ? repo.name.slice(0, 17) + '..' : repo.name;
+        ctx.fillText(name, startX, y + 10);
+        ctx.fillStyle = '#f0883e';
+        ctx.textAlign = 'right';
+        ctx.fillText(`${repo.stargazers_count || 0} DMG`, W * .92, y + 10);
+        ctx.globalAlpha = 1;
+      });
+    }
+
+    // Threat level (phase 4)
+    if (phase >= 4) {
+      const tp = Math.min(1, (elapsed - 10) / 1);
+      if (tp > 0 && tp < .15) {
+        playChord();
+        shakeAmount = 20;
+        addParticleBurst(W/2, H * .88, 40, THREAT_COLORS[stats.threat]);
+      }
+      ctx.globalAlpha = tp;
+      ctx.font = `${Math.min(12, W * .02)}px 'Press Start 2P'`;
+      ctx.fillStyle = '#8b949e';
+      ctx.textAlign = 'center';
+      ctx.fillText('THREAT LEVEL', W/2, H * .85);
+      ctx.font = `${Math.min(52, W * .09)}px 'Press Start 2P'`;
+      ctx.fillStyle = THREAT_COLORS[stats.threat];
+      ctx.shadowColor = THREAT_COLORS[stats.threat];
+      ctx.shadowBlur = 30;
+      ctx.fillText(stats.threat, W/2, H * .95);
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+    }
+
+    // particles
+    particles = particles.filter(p => p.life > 0);
+    particles.forEach(p => {
+      p.x += p.vx; p.y += p.vy; p.life -= p.decay; p.vy -= .02;
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    });
+
+    ctx.restore();
+    if (revealRunning) requestAnimationFrame(drawFrame);
+    else showBossCard(user, stats);
+  }
+  requestAnimationFrame(drawFrame);
+}
+
+// ---- Boss Card ----
+let currentUser = null, currentStats = null;
+
+function showBossCard(user, stats) {
+  stopBossMusic();
+  currentUser = user;
+  currentStats = stats;
+  showScreen('card-screen');
+  const card = document.getElementById('boss-card');
+  const langColor = getLangColor(stats.primaryLang);
+  const bossTitle = (stats.primaryLang || 'Unknown') + ' ' + getBossTitle(stats.primaryLang);
+  const tier = threatTierNum(stats.threat);
+  const spriteCanvas = drawBossSprite(tier, langColor, Math.min(200, window.innerWidth * .4));
+
+  const statBars = [
+    { label: 'HP', val: stats.hp, color: '#3fb950', max: 9999 },
+    { label: 'ATK', val: stats.atk, color: '#f85149', max: 9999 },
+    { label: 'DEF', val: stats.def, color: '#58a6ff', max: 9999 },
+    { label: 'MAG', val: stats.mag, color: '#a371f7', max: 9999 },
+    { label: 'SPD', val: stats.spd, color: '#d29922', max: 9999 }
+  ];
+
+  const attacksHtml = stats.attacks.map(r => {
+    const lang = r.language || '???';
+    const stars = r.stargazers_count || 0;
+    const name = r.name.length > 22 ? r.name.slice(0, 21) + '..' : r.name;
+    return `<div class="attack">
+      <span class="attack-name">${escHtml(name)}</span>
+      <span class="attack-lang">${escHtml(lang)}</span>
+      <span class="attack-dmg">${stars} DMG</span>
+    </div>`;
+  }).join('');
+
+  const threatClass = 'threat-' + stats.threat;
+
+  card.innerHTML = `
+    <div class="card-glow" style="background:radial-gradient(ellipse at 50% 30%,${langColor}33,transparent 70%)"></div>
+    <div class="boss-header">
+      <div class="avatar-wrap">
+        <div class="avatar-glow" style="background:${langColor}"></div>
+        <img src="${user.avatar_url}" alt="${escHtml(user.login)}" crossorigin="anonymous">
+      </div>
+      <div class="boss-name">${escHtml(user.login)}</div>
+      <div class="boss-type">${escHtml(bossTitle)}</div>
+      ${user.bio ? `<div class="boss-bio">"${escHtml(user.bio)}"</div>` : ''}
+    </div>
+    <div class="boss-sprite-wrap" id="sprite-mount"></div>
+    <div class="stats-grid">
+      ${statBars.map(s => `
+        <div class="stat-row">
+          <span class="stat-label">${s.label}</span>
+          <div class="stat-bar-bg"><div class="stat-bar-fill" style="width:0%;background:${s.color}" data-target="${(s.val / s.max * 100).toFixed(1)}"></div></div>
+          <span class="stat-val" data-target="${s.val}">0</span>
+        </div>
+      `).join('')}
+    </div>
+    <div class="attacks-section">
+      <div class="attacks-title">SPECIAL ATTACKS</div>
+      ${attacksHtml}
+    </div>
+    <div class="threat-section">
+      <div class="threat-label">THREAT LEVEL</div>
+      <div class="threat-badge ${threatClass}">${stats.threat}</div>
+    </div>
+  `;
+
+  // mount sprite
+  const mount = document.getElementById('sprite-mount');
+  spriteCanvas.classList.add('boss-sprite');
+  spriteCanvas.style.width = Math.min(160, window.innerWidth * .3) + 'px';
+  spriteCanvas.style.height = 'auto';
+  mount.appendChild(spriteCanvas);
+
+  // animate stat bars and counters
+  setTimeout(() => {
+    card.querySelectorAll('.stat-bar-fill').forEach(bar => {
+      bar.style.width = bar.dataset.target + '%';
+    });
+    card.querySelectorAll('.stat-val').forEach(el => {
+      animateCounter(el, parseInt(el.dataset.target), 1200);
+    });
+  }, 100);
+
+  // shake on threat
+  setTimeout(() => {
+    document.getElementById('boss-card').classList.add('shake');
+    setTimeout(() => document.getElementById('boss-card').classList.remove('shake'), 600);
+  }, 300);
+
+  // update URL
+  const url = new URL(window.location);
+  url.searchParams.set('user', user.login);
+  history.replaceState(null, '', url);
+}
+
+function animateCounter(el, target, duration) {
+  const start = performance.now();
+  function tick(now) {
+    const p = Math.min(1, (now - start) / duration);
+    const ease = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.floor(target * ease);
+    if (p < 1) requestAnimationFrame(tick);
+    else el.textContent = target;
+  }
+  requestAnimationFrame(tick);
+}
+
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+// ---- Share / Save ----
+async function renderCardToCanvas() {
+  const W = 1200, H = 630;
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+
+  const user = currentUser, stats = currentStats;
+  const langColor = getLangColor(stats.primaryLang);
+  const langRgb = hexToRgb(langColor);
+  const bossTitle = (stats.primaryLang || 'Unknown') + ' ' + getBossTitle(stats.primaryLang);
+
+  // background
+  ctx.fillStyle = '#0d1117';
+  ctx.fillRect(0, 0, W, H);
+
+  // subtle glow
+  const grad = ctx.createRadialGradient(W/2, 200, 30, W/2, 200, 300);
+  grad.addColorStop(0, `rgba(${langRgb.r},${langRgb.g},${langRgb.b},.12)`);
+  grad.addColorStop(1, 'transparent');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // border
+  ctx.strokeStyle = '#30363d';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(10, 10, W - 20, H - 20);
+
+  // inner accent line
+  ctx.strokeStyle = langColor + '44';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(16, 16, W - 32, H - 32);
+
+  // avatar
+  const avImg = new Image();
+  avImg.crossOrigin = 'anonymous';
+  avImg.src = user.avatar_url;
+  await new Promise(r => { avImg.onload = r; avImg.onerror = r; });
+
+  // avatar glow
+  const avGrad = ctx.createRadialGradient(160, 160, 30, 160, 160, 100);
+  avGrad.addColorStop(0, `rgba(${langRgb.r},${langRgb.g},${langRgb.b},.3)`);
+  avGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = avGrad;
+  ctx.fillRect(60, 60, 200, 200);
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(160, 160, 65, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.drawImage(avImg, 95, 95, 130, 130);
+  ctx.restore();
+  ctx.beginPath();
+  ctx.arc(160, 160, 66, 0, Math.PI * 2);
+  ctx.strokeStyle = langColor;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // boss name
+  ctx.font = '22px "Press Start 2P"';
+  ctx.fillStyle = '#e6edf3';
+  ctx.textAlign = 'left';
+  ctx.fillText(user.login, 260, 120);
+
+  // title
+  ctx.font = '11px "Press Start 2P"';
+  ctx.fillStyle = langColor;
+  ctx.fillText(bossTitle, 260, 148);
+
+  // bio
+  if (user.bio) {
+    ctx.font = '9px "Press Start 2P"';
+    ctx.fillStyle = '#8b949e';
+    const bio = user.bio.length > 60 ? user.bio.slice(0, 59) + '..' : user.bio;
+    ctx.fillText('"' + bio + '"', 260, 175);
+  }
+
+  // FINAL BOSS title
+  ctx.font = '14px "Press Start 2P"';
+  ctx.fillStyle = '#58a6ff';
+  ctx.textAlign = 'right';
+  ctx.fillText('FINAL BOSS', W - 40, 50);
+
+  // sprite
+  const tier = threatTierNum(stats.threat);
+  const sprite = drawBossSprite(tier, langColor, 128);
+  ctx.drawImage(sprite, W - 200, 70, 150, 150);
+
+  // stats
+  const statList = [
+    { label: 'HP', val: stats.hp, color: '#3fb950' },
+    { label: 'ATK', val: stats.atk, color: '#f85149' },
+    { label: 'DEF', val: stats.def, color: '#58a6ff' },
+    { label: 'MAG', val: stats.mag, color: '#a371f7' },
+    { label: 'SPD', val: stats.spd, color: '#d29922' }
+  ];
+  const barX = 100, barW = 320, barH = 18;
+  let by = 270;
+  ctx.textAlign = 'right';
+  statList.forEach(s => {
+    ctx.font = '9px "Press Start 2P"';
+    ctx.fillStyle = '#8b949e';
+    ctx.fillText(s.label, barX - 10, by + 13);
+    ctx.fillStyle = '#161b22';
+    ctx.fillRect(barX, by, barW, barH);
+    ctx.fillStyle = s.color;
+    ctx.fillRect(barX, by, barW * (s.val / 9999), barH);
+    ctx.fillStyle = '#e6edf3';
+    ctx.textAlign = 'left';
+    ctx.fillText(s.val.toString(), barX + barW + 12, by + 13);
+    ctx.textAlign = 'right';
+    by += 30;
+  });
+
+  // attacks
+  ctx.textAlign = 'left';
+  ctx.font = '10px "Press Start 2P"';
+  ctx.fillStyle = '#58a6ff';
+  ctx.fillText('SPECIAL ATTACKS', 560, 290);
+
+  stats.attacks.slice(0, 3).forEach((repo, i) => {
+    const y = 320 + i * 40;
+    ctx.fillStyle = '#161b22';
+    ctx.fillRect(560, y - 8, 580, 30);
+    ctx.strokeStyle = '#21262d';
+    ctx.strokeRect(560, y - 8, 580, 30);
+    ctx.font = '9px "Press Start 2P"';
+    ctx.fillStyle = '#e6edf3';
+    const name = repo.name.length > 20 ? repo.name.slice(0, 19) + '..' : repo.name;
+    ctx.fillText(name, 572, y + 10);
+    ctx.fillStyle = '#f0883e';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${repo.stargazers_count || 0} DMG`, W - 60, y + 10);
+    if (repo.language) {
+      ctx.fillStyle = '#484f58';
+      ctx.font = '7px "Press Start 2P"';
+      ctx.fillText(repo.language, W - 180, y + 10);
+    }
+    ctx.textAlign = 'left';
+  });
+
+  // threat badge
+  ctx.textAlign = 'center';
+  ctx.font = '10px "Press Start 2P"';
+  ctx.fillStyle = '#8b949e';
+  ctx.fillText('THREAT LEVEL', W / 2, H - 80);
+
+  ctx.font = '48px "Press Start 2P"';
+  ctx.fillStyle = THREAT_COLORS[stats.threat];
+  ctx.shadowColor = THREAT_COLORS[stats.threat];
+  ctx.shadowBlur = 25;
+  ctx.fillText(stats.threat, W / 2, H - 30);
+  ctx.shadowBlur = 0;
+
+  // scanlines
+  ctx.fillStyle = 'rgba(0,0,0,.06)';
+  for (let y = 0; y < H; y += 3) ctx.fillRect(0, y, W, 1);
+
+  return c;
+}
+
+document.getElementById('save-btn').addEventListener('click', async () => {
+  const c = await renderCardToCanvas();
+  const link = document.createElement('a');
+  link.download = `final-boss-${currentUser.login}.png`;
+  link.href = c.toDataURL('image/png');
+  link.click();
+});
+
+document.getElementById('copy-btn').addEventListener('click', async () => {
+  try {
+    const c = await renderCardToCanvas();
+    const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = 'COPIED!';
+    setTimeout(() => btn.textContent = 'COPY', 2000);
+  } catch (e) {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = 'FAILED';
+    setTimeout(() => btn.textContent = 'COPY', 2000);
+  }
+});
+
+document.getElementById('share-btn').addEventListener('click', async () => {
+  if (navigator.share) {
+    try {
+      const c = await renderCardToCanvas();
+      const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+      const file = new File([blob], `final-boss-${currentUser.login}.png`, { type: 'image/png' });
+      await navigator.share({
+        title: `FINAL BOSS: ${currentUser.login}`,
+        text: `${currentUser.login} is a ${(currentStats.primaryLang || 'Unknown') + ' ' + getBossTitle(currentStats.primaryLang)} - Threat Level ${currentStats.threat}!`,
+        files: [file]
+      });
+    } catch (e) { /* user cancelled */ }
+  } else {
+    const url = new URL(window.location);
+    url.searchParams.set('user', currentUser.login);
+    try {
+      await navigator.clipboard.writeText(url.toString());
+      const btn = document.getElementById('share-btn');
+      btn.textContent = 'LINK COPIED!';
+      setTimeout(() => btn.textContent = 'SHARE', 2000);
+    } catch(e) {}
+  }
+});
+
+document.getElementById('new-boss-btn').addEventListener('click', () => {
+  stopBossMusic();
+  showScreen('input-screen');
+  document.getElementById('username-input').value = '';
+  document.getElementById('username-input').focus();
+  const url = new URL(window.location);
+  url.searchParams.delete('user');
+  history.replaceState(null, '', url);
+});
+
+// ---- Main Flow ----
+async function loadBoss(username) {
+  const errEl = document.getElementById('error-msg');
+  errEl.textContent = '';
+  const btn = document.getElementById('go-btn');
+  btn.textContent = 'LOADING...';
+  btn.disabled = true;
+
+  try {
+    const { user, repos } = await fetchGitHubData(username);
+    const stats = calcStats(user, repos);
+    await runReveal(user, stats);
+  } catch (e) {
+    errEl.textContent = e.message || 'Something went wrong';
+    showScreen('input-screen');
+  } finally {
+    btn.textContent = 'FIGHT';
+    btn.disabled = false;
+  }
+}
+
+document.getElementById('go-btn').addEventListener('click', () => {
+  const val = document.getElementById('username-input').value.trim();
+  if (val) loadBoss(val);
+});
+document.getElementById('username-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const val = e.target.value.trim();
+    if (val) loadBoss(val);
+  }
+});
+
+// URL parameter support
+const params = new URLSearchParams(window.location.search);
+const urlUser = params.get('user');
+if (urlUser) {
+  document.getElementById('username-input').value = urlUser;
+  loadBoss(urlUser);
+}
+</script>
+</body>
+</html>
